@@ -1,42 +1,25 @@
 <template>
-  <div class="app">
-    <header class="top-nav">
-      <div class="nav-container">
-        <div class="logo">
-          <h1>{{ t('nav.companyName') }}</h1>
-          <span class="subtitle">{{ t('nav.subtitle') }}</span>
-        </div>
-        <nav class="nav-tabs">
-          <router-link to="/" :class="{ active: $route.path === '/' }">
-            {{ t('nav.overview') }}
-          </router-link>
-          <router-link to="/inventory" :class="{ active: $route.path === '/inventory' }">
-            {{ t('nav.inventory') }}
-          </router-link>
-          <router-link to="/orders" :class="{ active: $route.path === '/orders' }">
-            {{ t('nav.orders') }}
-          </router-link>
-          <router-link to="/spending" :class="{ active: $route.path === '/spending' }">
-            {{ t('nav.finance') }}
-          </router-link>
-          <router-link to="/demand" :class="{ active: $route.path === '/demand' }">
-            {{ t('nav.demandForecast') }}
-          </router-link>
-          <router-link to="/reports" :class="{ active: $route.path === '/reports' }">
-            Reports
-          </router-link>
-        </nav>
-        <LanguageSwitcher />
+  <div class="app-shell">
+    <Sidebar :collapsed="sidebarCollapsed" @toggle-collapse="sidebarCollapsed = !sidebarCollapsed">
+      <template #footer>
         <ProfileMenu
           @show-profile-details="showProfileDetails = true"
           @show-tasks="showTasks = true"
         />
-      </div>
-    </header>
-    <FilterBar />
-    <main class="main-content">
-      <router-view />
-    </main>
+      </template>
+    </Sidebar>
+
+    <div class="main-column">
+      <header class="main-header">
+        <FilterBar />
+        <div class="main-header__actions">
+          <LanguageSwitcher />
+        </div>
+      </header>
+      <main class="main-content">
+        <router-view />
+      </main>
+    </div>
 
     <ProfileDetailsModal
       :is-open="showProfileDetails"
@@ -59,6 +42,7 @@ import { ref, onMounted, computed } from 'vue'
 import { api } from './api'
 import { useAuth } from './composables/useAuth'
 import { useI18n } from './composables/useI18n'
+import Sidebar from './components/Sidebar.vue'
 import FilterBar from './components/FilterBar.vue'
 import ProfileMenu from './components/ProfileMenu.vue'
 import ProfileDetailsModal from './components/ProfileDetailsModal.vue'
@@ -68,6 +52,7 @@ import LanguageSwitcher from './components/LanguageSwitcher.vue'
 export default {
   name: 'App',
   components: {
+    Sidebar,
     FilterBar,
     ProfileMenu,
     ProfileDetailsModal,
@@ -80,6 +65,7 @@ export default {
     const showProfileDetails = ref(false)
     const showTasks = ref(false)
     const apiTasks = ref([])
+    const sidebarCollapsed = ref(false)
 
     // Merge mock tasks from currentUser with API tasks
     const tasks = computed(() => {
@@ -155,13 +141,84 @@ export default {
       tasks,
       addTask,
       deleteTask,
-      toggleTask
+      toggleTask,
+      sidebarCollapsed
     }
   }
 }
 </script>
 
 <style>
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Surface — the canvas, the chrome, the cards */
+  --surface-canvas: #f8fafc;       /* page background (slate-50) */
+  --surface-chrome: #ffffff;       /* sidebar, header strip, cards */
+  --surface-raised: #ffffff;       /* modals, popovers */
+  --surface-muted:  #f1f5f9;       /* hover state on subtle interactive elements */
+  --surface-sunken: #f8fafc;       /* inset areas, table headers */
+
+  /* Border — three weights, neutral */
+  --border-subtle:  #f1f5f9;
+  --border-default: #e2e8f0;
+  --border-strong:  #cbd5e1;
+
+  /* Ink — text and icon color, four weights */
+  --ink-primary:   #0f172a;        /* headings, key values */
+  --ink-secondary: #334155;        /* body */
+  --ink-tertiary:  #64748b;        /* labels, helper text */
+  --ink-quaternary:#94a3b8;        /* placeholders, disabled */
+  --ink-inverse:   #ffffff;        /* text on filled brand surfaces */
+
+  /* Brand — single accent, active state, primary CTAs, focus rings */
+  --brand:         #2563eb;
+  --brand-hover:   #1d4ed8;
+  --brand-soft:    #eff6ff;        /* tinted background for active sidebar item */
+  --brand-soft-border: #dbeafe;
+  --focus-ring:    rgba(37, 99, 235, 0.18);
+
+  /* Status — green / amber / red, used in badges and KPI tones */
+  --success:       #059669;
+  --success-soft:  #d1fae5;
+  --warning:       #ea580c;
+  --warning-soft:  #fed7aa;
+  --danger:        #dc2626;
+  --danger-soft:   #fecaca;
+  --info:          #3b82f6;
+  --info-soft:     #dbeafe;
+
+  /* Radius — three steps */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Spacing — 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px 0 rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 32px -8px rgba(15, 23, 42, 0.18);
+
+  /* Layout constants */
+  --sidebar-width:           240px;
+  --sidebar-width-collapsed: 64px;
+  --header-height:           56px;
+  --content-max-width:       1440px;
+
+  /* Motion */
+  --motion-fast: 120ms ease;
+  --motion-base: 180ms ease;
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -170,110 +227,62 @@ export default {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: #f8fafc;
-  color: #1e293b;
+  background: var(--surface-canvas);
+  color: var(--ink-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.app {
+/* ─── Shell ─────────────────────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--surface-canvas);
+}
+
+.main-column {
+  flex: 1;
+  min-width: 0;            /* prevents flex children from forcing horizontal scroll */
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
-.top-nav {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+.main-header {
   position: sticky;
   top: 0;
-  z-index: 100;
-}
-
-.nav-container {
-  max-width: 1600px;
-  margin: 0 auto;
+  z-index: 50;
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--border-default);
   display: flex;
   align-items: center;
-  padding: 0 2rem;
-  height: 70px;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+  height: var(--header-height);
 }
 
-.nav-container > .nav-tabs {
+.main-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin-left: auto;
-  margin-right: 1rem;
-}
-
-.nav-container > .language-switcher {
-  margin-right: 1rem;
-}
-
-.logo {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-.logo h1 {
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
-}
-
-.subtitle {
-  font-size: 0.813rem;
-  color: #64748b;
-  font-weight: 400;
-  padding-left: 0.75rem;
-  border-left: 1px solid #e2e8f0;
-}
-
-.nav-tabs {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.nav-tabs a {
-  padding: 0.625rem 1.25rem;
-  color: #64748b;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.938rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.nav-tabs a:hover {
-  color: #0f172a;
-  background: #f1f5f9;
-}
-
-.nav-tabs a.active {
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.nav-tabs a.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2563eb;
 }
 
 .main-content {
   flex: 1;
-  max-width: 1600px;
   width: 100%;
+  max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: 1.5rem 2rem;
+  padding: var(--space-6);
 }
 
+/* ─── Narrow viewport: auto-collapse sidebar ────────────────────────────── */
+@media (max-width: 960px) {
+  .sidebar { width: var(--sidebar-width-collapsed); }
+  .sidebar :deep(.nav-item-label),
+  .sidebar :deep(.brand-text) { display: none; }
+}
+
+/* ─── Page header ───────────────────────────────────────────────────────── */
 .page-header {
   margin-bottom: 1.5rem;
 }
@@ -281,38 +290,39 @@ body {
 .page-header h2 {
   font-size: 1.875rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink-primary);
   margin-bottom: 0.375rem;
   letter-spacing: -0.025em;
 }
 
 .page-header p {
-  color: #64748b;
+  color: var(--ink-tertiary);
   font-size: 0.938rem;
 }
 
+/* ─── Stats grid + stat cards ───────────────────────────────────────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
 .stat-card {
-  background: white;
+  background: var(--surface-chrome);
   padding: 1.25rem;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  transition: all var(--motion-base);
 }
 
 .stat-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-label {
-  color: #64748b;
+  color: var(--ink-tertiary);
   font-size: 0.875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -323,31 +333,21 @@ body {
 .stat-value {
   font-size: 2.25rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink-primary);
   letter-spacing: -0.025em;
 }
 
-.stat-card.warning .stat-value {
-  color: #ea580c;
-}
+.stat-card.warning .stat-value { color: var(--warning); }
+.stat-card.success .stat-value { color: var(--success); }
+.stat-card.danger  .stat-value { color: var(--danger); }
+.stat-card.info    .stat-value { color: var(--info); }
 
-.stat-card.success .stat-value {
-  color: #059669;
-}
-
-.stat-card.danger .stat-value {
-  color: #dc2626;
-}
-
-.stat-card.info .stat-value {
-  color: #2563eb;
-}
-
+/* ─── Card ──────────────────────────────────────────────────────────────── */
 .card {
-  background: white;
-  border-radius: 10px;
+  background: var(--surface-chrome);
+  border-radius: var(--radius-lg);
   padding: 1.25rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-default);
   margin-bottom: 1.25rem;
 }
 
@@ -357,16 +357,17 @@ body {
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.875rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-default);
 }
 
 .card-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink-primary);
   letter-spacing: -0.025em;
 }
 
+/* ─── Table chrome ──────────────────────────────────────────────────────── */
 .table-container {
   overflow-x: auto;
 }
@@ -377,16 +378,16 @@ table {
 }
 
 thead {
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
 }
 
 th {
   text-align: left;
   padding: 0.5rem 0.75rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-secondary);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -394,92 +395,55 @@ th {
 
 td {
   padding: 0.5rem 0.75rem;
-  border-top: 1px solid #f1f5f9;
-  color: #334155;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--ink-secondary);
   font-size: 0.875rem;
 }
 
 tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion-fast);
 }
 
 tbody tr:hover {
-  background: #f8fafc;
+  background: var(--surface-sunken);
 }
 
+/* ─── Badges ────────────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
   padding: 0.313rem 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
 
-.badge.success {
-  background: #d1fae5;
-  color: #065f46;
-}
+.badge.success    { background: var(--success-soft); color: #065f46; }
+.badge.warning    { background: var(--warning-soft); color: #92400e; }
+.badge.danger     { background: var(--danger-soft);  color: #991b1b; }
+.badge.info       { background: var(--info-soft);    color: #1e40af; }
+.badge.increasing { background: var(--success-soft); color: #065f46; }
+.badge.decreasing { background: var(--danger-soft);  color: #991b1b; }
+.badge.stable     { background: #e0e7ff; color: #3730a3; }
+.badge.high       { background: var(--danger-soft);  color: #991b1b; }
+.badge.medium     { background: var(--warning-soft); color: #92400e; }
+.badge.low        { background: var(--info-soft);    color: #1e40af; }
 
-.badge.warning {
-  background: #fed7aa;
-  color: #92400e;
-}
-
-.badge.danger {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.info {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.badge.increasing {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge.decreasing {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.stable {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.badge.high {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.medium {
-  background: #fed7aa;
-  color: #92400e;
-}
-
-.badge.low {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
+/* ─── States ────────────────────────────────────────────────────────────── */
 .loading {
   text-align: center;
   padding: 3rem;
-  color: #64748b;
+  color: var(--ink-tertiary);
   font-size: 0.938rem;
 }
 
 .error {
   background: #fef2f2;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--danger-soft);
   color: #991b1b;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin: 1rem 0;
   font-size: 0.938rem;
 }
